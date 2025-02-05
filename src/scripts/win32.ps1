@@ -3,7 +3,7 @@ param (
   [ValidateNotNull()]
   [ValidateLength(1, [int]::MaxValue)]
   [string]
-  $version = '8.2',
+  $version = '8.4',
   [Parameter(Position = 1, Mandatory = $true)]
   [ValidateNotNull()]
   [ValidateLength(1, [int]::MaxValue)]
@@ -401,6 +401,15 @@ if (Test-Path -LiteralPath $php_dir -PathType Container) {
 }
 $status = "Installed"
 $extra_version = ""
+if($version -eq 'pre') {
+  if($null -ne $installed) {
+    $version = $installed.MajorMinorVersion
+    $env:update = 'false'
+  } else {
+    Add-Log $cross "PHP" "No pre-installed PHP version found"
+    Write-Error "No pre-installed PHP version found" -ErrorAction Stop
+  }
+}
 if ($null -eq $installed -or -not("$($installed.Version).".StartsWith(($version -replace '^(\d+(\.\d+)*).*', '$1.'))) -or $ts -ne $installed.ThreadSafe) {
   if ($version -lt '7.0' -and ($null -eq (Get-Module -ListAvailable -Name VcRedist))) {
     Install-PSPackage VcRedist VcRedist-main\VcRedist\VcRedist "$github/aaronparker/VcRedist/archive/main.zip" Get-VcList >$null 2>&1
@@ -434,7 +443,7 @@ if($installed.MajorMinorVersion -ne $version) {
   Write-Error "Could not setup PHP $version" -ErrorAction Stop
 }
 if($version -lt "5.5") {
-  ('libeay32.dll', 'ssleay32.dll') | ForEach-Object -Parallel { Get-File -Url "$using:php_builder/releases/download/openssl-1.0.2u/$_" -OutFile $using:php_dir\$_ >$null 2>&1 }
+  ('libeay32.dll', 'ssleay32.dll') | ForEach-Object -Parallel { Invoke-WebRequest -Uri "$using:php_builder/releases/download/openssl-1.0.2u/$_" -OutFile $using:php_dir\$_ >$null 2>&1 }
 } else {
   $enable_extensions += ('opcache')
 }
